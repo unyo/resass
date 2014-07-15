@@ -215,14 +215,14 @@ class ReSASS
         # for each line in the file
         File.open(current_file).each_with_index do |line, i|
             # read from { to }
-            if (ruleset_head = line.match(/(.*) \{/))
+            if (ruleset_head = line.match(/(.*)\s*\{/))
                 start_new_ruleset!(ruleset_head[1], current_file)
             elsif line[/\s*\}$/]
                 end_ruleset!
             # ignore variables
             elsif line[/^\$\w+/]
                 next
-            elsif (declaration = line.match(/\s*([\w\-]+): (.*);/))
+            elsif (declaration = line.match(/\s*([\w\-]+):\s*(.*);/))
                 if !declaration or line[/\{/] or line[/\}/]
                     puts "Bad line #{i}"
                 end
@@ -261,7 +261,7 @@ class ReSASS
                     a[:order] <=> b[:order]
                 end
                 puts "BAD ruleset, #{ruleset[:file]}:"
-                puts "#{ruleset[:attribute]} {"
+                puts "#{ruleset[:attribute].strip} {"
                 ruleset[:declarations].each do |declaration|
                     puts "  #{declaration[:name]}: #{declaration[:value]};"
                 end

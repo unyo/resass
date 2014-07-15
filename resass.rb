@@ -3,8 +3,11 @@
 class ReSASS
     def initialize(glob)
         if (!glob)
-            glob = '~/exm-client/core/css/*.scss'
+            glob = "~/exm-client/core/css/*.scss"
+        else
+            glob = "#{glob}/*.scss"
         end
+        puts "Processing #{glob}..."
         @files = Dir.glob(glob)
         @rulesets = []
         @current_ruleset = {}

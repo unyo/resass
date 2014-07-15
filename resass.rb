@@ -3,12 +3,12 @@
 class ReSASS
     def initialize(glob)
         if (!glob)
-            glob = './exm-client/core/css/*.scss'
+            glob = '~/exm-client/core/css/*.scss'
         end
         @files = Dir.glob(glob)
-        @chunks = []
-        @current_chunk = {}
-        @pending_chunks = []
+        @rulesets = []
+        @current_ruleset = {}
+        @pending_rulesets = []
         @browser_tags = ['-webkit-','-khtml-','-epub-','-moz-','-moz-osx-','-ms-','-o-']
         @order = [
             'position',
@@ -162,27 +162,26 @@ class ReSASS
     end
     def process_files!
         @files.each do |file|
-            split_into_sass_chunks!(file)
-            check_chunks!
-            display_correct_chunks!
+            split_into_sass_rulesets!(file)
+            check_rulesets!
         end
     end
-    def start_new_chunk!(chunk_head, file)
-        if @current_chunk != {}
-            @pending_chunks.push(@current_chunk)
+    def start_new_ruleset!(ruleset_head, file)
+        if @current_ruleset != {}
+            @pending_rulesets.push(@current_ruleset)
         end
-        @current_chunk = {
-            attribute: chunk_head,
-            properties: [],
+        @current_ruleset = {
+            attribute: ruleset_head,
+            declarations: [],
             file: file
         }
     end
-    def end_chunk!
-        @chunks.push(@current_chunk)
-        if (!@pending_chunks.empty?)
-            @current_chunk = @pending_chunks.pop
+    def end_ruleset!
+        @rulesets.push(@current_ruleset)
+        if (!@pending_rulesets.empty?)
+            @current_ruleset = @pending_rulesets.pop
         else
-            @current_chunk = {}
+            @current_ruleset = {}
         end
     end
     def unspecialize(name)
@@ -192,39 +191,39 @@ class ReSASS
         end
         name
     end
-    def add_new_property(property, i, line)
-        name = unspecialize(property[1])
+    def add_new_declaration(declaration, i, line)
+        name = unspecialize(declaration[1])
         order = @order.index(name)
         if (order.nil?)
-            puts "Bad property #{i}: '#{name}', #{line}"
+            puts "Bad declaration #{i}: '#{name}', #{line}"
             order = -1
         end
-        new_property = {
-            property: name,
-            name: property[1],
-            value: property[2],
+        new_declaration = {
+            declaration: name,
+            name: declaration[1],
+            value: declaration[2],
             index: i,
             order: order,
             line: line
         }
-        @current_chunk[:properties].push(new_property)
+        @current_ruleset[:declarations].push(new_declaration)
     end
-    def split_into_sass_chunks!(current_file)
+    def split_into_sass_rulesets!(current_file)
         # for each line in the file
         File.open(current_file).each_with_index do |line, i|
             # read from { to }
-            if (chunk_head = line.match(/(.*) \{/))
-                start_new_chunk!(chunk_head[1], current_file)
+            if (ruleset_head = line.match(/(.*) \{/))
+                start_new_ruleset!(ruleset_head[1], current_file)
             elsif line[/\s*\}$/]
-                end_chunk!
+                end_ruleset!
             # ignore variables
             elsif line[/^\$\w+/]
                 next
-            elsif (property = line.match(/\s*([\w\-]+): (.*);/))
-                if !property or line[/\{/] or line[/\}/]
+            elsif (declaration = line.match(/\s*([\w\-]+): (.*);/))
+                if !declaration or line[/\{/] or line[/\}/]
                     puts "Bad line #{i}"
                 end
-                add_new_property(property, i, line)
+                add_new_declaration(declaration, i, line)
             # ignore newlines, comments, and includes
             elsif (line[/^\s*$/] or 
                 (line[/^\s*\/\*/] and line[/\*\/\s*/]) or
@@ -239,36 +238,32 @@ class ReSASS
             end
         end
     end
-    def check_chunks!
-        @bad_chunks = []
-        @chunks.each do |chunk|
-            last_property_order = 0
-            chunk_bad = false
-            chunk[:properties].each do |property|
-                if (last_property_order > property[:order])
-                    puts "File: #{chunk[:file]}, Line: #{property[:index]}"
-                    puts "Bad order: '#{chunk[:attribute]}' '#{property[:property]}' #{property[:index]}"
-                    @bad_chunks.push(chunk)
-                    chunk_bad = true
+    def check_rulesets!
+        @bad_rulesets = []
+        @rulesets.each do |ruleset|
+            last_declaration_order = 0
+            ruleset_bad = false
+            ruleset[:declarations].each do |declaration|
+                if (last_declaration_order > declaration[:order])
+                    #puts "File: #{ruleset[:file]}, Line: #{declaration[:index]}"
+                    #puts "Bad order: '#{ruleset[:attribute]}' '#{declaration[:declaration]}' #{declaration[:index]}"
+                    @bad_rulesets.push(ruleset)
+                    ruleset_bad = true
                 else
-                    last_property_order = property[:order]
+                    last_declaration_order = declaration[:order]
                 end
             end
-            if chunk_bad
-                chunk[:properties].sort! do |a, b|
+            if ruleset_bad
+                ruleset[:declarations].sort! do |a, b|
                     a[:order] <=> b[:order]
                 end
-                puts "BAD CHUNK, #{chunk[:file]}:"
-                puts "#{chunk[:attribute]} {"
-                chunk[:properties].each do |property|
-                    puts "  #{property[:name]}: #{property[:value]};"
+                puts "BAD ruleset, #{ruleset[:file]}:"
+                puts "#{ruleset[:attribute]} {"
+                ruleset[:declarations].each do |declaration|
+                    puts "  #{declaration[:name]}: #{declaration[:value]};"
                 end
                 puts "}"
             end
-        end
-    end
-    def display_correct_chunks!
-        @bad_chunks.each do |chunk|
         end
     end
 end

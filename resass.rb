@@ -219,18 +219,18 @@ class ReSASS
                 start_new_ruleset!(ruleset_head[1], current_file)
             elsif line[/\s*\}$/]
                 end_ruleset!
-            # ignore variables
-            elsif line[/^\$\w+/]
+            # ignore variables and comments
+            elsif (line[/^\$\w+/] or
+                (line[/^\s*\/\*/] and line[/\*\/\s*/]) or
+                line[/^\s+\/\//])
                 next
             elsif (declaration = line.match(/\s*([\w\-]+):\s*(.*);/))
                 if !declaration or line[/\{/] or line[/\}/]
                     puts "Bad line #{i}"
                 end
                 add_new_declaration(declaration, i, line)
-            # ignore newlines, comments, and includes
+            # ignore includes
             elsif (line[/^\s*$/] or 
-                (line[/^\s*\/\*/] and line[/\*\/\s*/]) or
-                line[/^\s+\/\//] or
                 line['@include'] or
                 line['@import'] or
                 line['@extend'] or

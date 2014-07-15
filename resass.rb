@@ -216,7 +216,7 @@ class ReSASS
             # ignore variables and comments
             elsif (line[/^\$\w+/] or
                 (line[/^\s*\/\*/] and line[/\*\/\s*/]) or
-                line[/^\s+\/\//])
+                line[/^\s*\/\//])
                 next
             elsif (declaration = line.match(/\s*([\w\-]+):\s*(.*);/))
                 if !declaration or line[/\{/] or line[/\}/]

@@ -2,13 +2,8 @@
 
 class ReSASS
     def initialize(glob)
-        if (!glob)
-            glob = "~/exm-client/core/css/*.scss"
-        else
-            glob = "#{glob}/*.scss"
-        end
         puts "Processing #{glob}..."
-        @files = Dir.glob(glob)
+        @file = glob
         @rulesets = []
         @current_ruleset = {}
         @pending_rulesets = []
@@ -163,20 +158,19 @@ class ReSASS
             'tap-highlight-color'
         ]
     end
-    def process_files!
-        @files.each do |file|
-            split_into_sass_rulesets!(file)
-            check_rulesets!
-        end
+    def process_file!
+        split_into_sass_rulesets!(@file)
+        check_rulesets!
     end
-    def start_new_ruleset!(ruleset_head, file)
+    def start_new_ruleset!(ruleset_head, file, i)
         if @current_ruleset != {}
             @pending_rulesets.push(@current_ruleset)
         end
         @current_ruleset = {
             attribute: ruleset_head,
             declarations: [],
-            file: file
+            file: file,
+            index: i
         }
     end
     def end_ruleset!
@@ -216,7 +210,7 @@ class ReSASS
         File.open(current_file).each_with_index do |line, i|
             # read from { to }
             if (ruleset_head = line.match(/(.*)\s*\{/))
-                start_new_ruleset!(ruleset_head[1], current_file)
+                start_new_ruleset!(ruleset_head[1], current_file, i)
             elsif line[/\s*\}$/]
                 end_ruleset!
             # ignore variables and comments
@@ -244,6 +238,9 @@ class ReSASS
     end
     def check_rulesets!
         @bad_rulesets = []
+        @rulesets.sort! do |a, b|
+            a[:index] <=> b[:index]
+        end
         @rulesets.each do |ruleset|
             last_declaration_order = 0
             ruleset_bad = false
@@ -261,7 +258,7 @@ class ReSASS
                 ruleset[:declarations].sort! do |a, b|
                     a[:order] <=> b[:order]
                 end
-                puts "BAD ruleset #{ruleset[:file]} [#{(ruleset[:declarations].first[:index]-1)}]:"
+                puts "BAD ruleset #{ruleset[:file]} [#{(ruleset[:index])}]:"
                 puts "#{ruleset[:attribute].strip} {"
                 ruleset[:declarations].each do |declaration|
                     puts "  #{declaration[:name]}: #{declaration[:value]};"
@@ -272,5 +269,7 @@ class ReSASS
     end
 end
 
-resass = ReSASS.new(ARGV.first)
-resass.process_files!
+ARGV.each do |argv|
+    resass = ReSASS.new(argv)
+    resass.process_file!
+end

@@ -237,7 +237,8 @@ class ReSASS
                 line['@mixin'])
                 next
             else 
-                puts "Bad line #{i}: #{line}"
+                puts "Bad line #{current_file} [#{i}]:"
+                puts "  #{line}"
             end
         end
     end
@@ -260,7 +261,7 @@ class ReSASS
                 ruleset[:declarations].sort! do |a, b|
                     a[:order] <=> b[:order]
                 end
-                puts "BAD ruleset, #{ruleset[:file]}:"
+                puts "BAD ruleset #{ruleset[:file]} [#{(ruleset[:declarations].first[:index]-1)}]:"
                 puts "#{ruleset[:attribute].strip} {"
                 ruleset[:declarations].each do |declaration|
                     puts "  #{declaration[:name]}: #{declaration[:value]};"
